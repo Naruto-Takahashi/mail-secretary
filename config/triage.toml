@@ -27,3 +27,10 @@ ignore = ""
 archive_levels = ["info", "ignore"]   # 受信トレイから外す重要度
 # 既存フィルタが「受信トレイに残す」と決めているラベル。AI 判定でも外さない (スター付きは常に保護)。
 protected_labels = []
+
+# 既存メールへの一回限りのラベル付け (`mail-secretary backfill`)
+[backfill]
+stale_days = 30   # これより古い緊急・要対応は、参考に下げる
+# AI を呼ばず「無視」にするもの。Gmail のカテゴリと、個人用のプロモ系ラベル (上書き設定で足す)
+rule_ignore_categories = ["CATEGORY_PROMOTIONS", "CATEGORY_SOCIAL"]
+rule_ignore_labels = []

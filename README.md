@@ -15,6 +15,7 @@ mail-secretary auth                 初回認可 (ブラウザが開く)
 mail-secretary filters plan|apply   Gmail フィルタの同期 (config/filters.toml)
 mail-secretary triage               直近のメールを判定して表示するだけ
 mail-secretary run [--apply]        判定・整理・通知
+mail-secretary backfill [--apply]   既存メールへの一回限りのラベル付け (通知しない。--apply なしは dry-run)
 mail-secretary restore-inbox        重要な GitHub 通知を受信トレイに戻す
 ```
 

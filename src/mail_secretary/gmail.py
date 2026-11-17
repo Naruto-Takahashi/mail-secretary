@@ -67,33 +67,33 @@ def list_ids(svc, q: str, limit: int) -> list[str]:
     return ids[:limit]
 
 
+def get_mail(svc, mid: str, names: dict[str, str]) -> dict:
+    """1通分のメタデータ (件名・差出人・スニペット・ラベル)。本文は取らない。"""
+    m = svc.users().messages().get(
+        userId="me", id=mid, format="metadata", metadataHeaders=["From", "Subject", "Date"]
+    ).execute()
+    raw = m.get("labelIds", [])
+    return {
+        "id": mid,
+        "threadId": m.get("threadId", mid),
+        "ts": int(m["internalDate"]),
+        "from": header(m, "From"),
+        "subject": header(m, "Subject"),
+        "date": header(m, "Date"),
+        "snippet": (m.get("snippet") or "")[:200],
+        "categories": [i for i in raw if i.startswith("CATEGORY_")],
+        "labels": [names.get(i, i) for i in raw if not i.startswith(("CATEGORY_", "UNREAD", "IMPORTANT"))],
+    }
+
+
 def fetch_recent(svc, hours: int, limit: int) -> list[dict]:
-    """直近 hours 時間のメール(新しい順)。本文は取らず、件名・差出人・スニペットだけ。"""
+    """直近 hours 時間のメール(新しい順)。"""
     names = label_names(svc)
     days = max(1, -(-hours // 24))
     q = f"newer_than:{days}d -in:trash -in:spam -in:sent -in:drafts"
     cutoff_ms = (time.time() - hours * 3600) * 1000
-    out = []
-    for mid in list_ids(svc, q, limit):
-        m = svc.users().messages().get(
-            userId="me", id=mid, format="metadata", metadataHeaders=["From", "Subject", "Date"]
-        ).execute()
-        if int(m["internalDate"]) < cutoff_ms:
-            continue
-        out.append(
-            {
-                "id": mid,
-                "threadId": m.get("threadId", mid),
-                "from": header(m, "From"),
-                "subject": header(m, "Subject"),
-                "date": header(m, "Date"),
-                "snippet": (m.get("snippet") or "")[:200],
-                "labels": [
-                    names.get(i, i) for i in m.get("labelIds", []) if not i.startswith(("CATEGORY_", "UNREAD", "IMPORTANT"))
-                ],
-            }
-        )
-    return out
+    mails = (get_mail(svc, mid, names) for mid in list_ids(svc, q, limit))
+    return [m for m in mails if m["ts"] >= cutoff_ms]
 
 
 def batch_modify(svc, ids: list[str], add: list[str], remove: list[str]) -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 
 from . import filters
+from .backfill import cmd_backfill
 from .gmail import get_service
 from .notify import cmd_run
 from .triage import LEVEL_JA, classify, is_sensitive
@@ -59,6 +60,16 @@ def main() -> int:
     up.add_argument("--ignore-seen", action="store_true", help="処理済みのメールも対象にする")
     up.add_argument("--digest-now", action="store_true", help="時刻に関係なく要対応のまとめを今送る")
     up.set_defaults(fn=cmd_run)
+
+    bp = sub.add_parser("backfill", help="既存メールへの一回限りのラベル付け (通知しない)。--apply なしは dry-run")
+    bp.add_argument("--query", default="in:inbox", help="対象の Gmail 検索式 (既定: in:inbox)")
+    bp.add_argument("--older-than-days", type=int, default=2, help="これより新しいメールは定期実行に任せる")
+    bp.add_argument("--stale-days", type=int, default=None, help="これより古い緊急・要対応は参考に下げる (既定: 設定値)")
+    bp.add_argument("--limit", type=int, default=100000, help="処理する最大件数 (dry-run の試し打ちに)")
+    bp.add_argument("--model", default=None)
+    bp.add_argument("--verbose", action="store_true")
+    bp.add_argument("--apply", action="store_true", help="実際に Gmail へ反映する")
+    bp.set_defaults(fn=cmd_backfill)
 
     args = p.parse_args()
     args.fn(args)
