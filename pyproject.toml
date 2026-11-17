@@ -1,0 +1,9 @@
+[project]
+name = "mail-secretary"
+version = "0.2.0"
+description = "メールの自動整理・AI 重要度判定・Discord 通知を行う個人用の秘書"
+requires-python = ">=3.11"
+dependencies = ["google-api-python-client", "google-auth-oauthlib"]
+
+[tool.uv]
+package = false

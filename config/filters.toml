@@ -1,0 +1,19 @@
+# Gmail フィルタの望ましい状態 (`mail-secretary filters plan|apply`)。既定値。
+# 管理対象は `label` で指すラベルを付与するフィルタのみ。他のフィルタには触れない。
+
+# --- GitHub ---------------------------------------------------------------------
+# GitHub の通知は全て notifications@github.com から届くが、通知の理由は Cc の noreply アドレスで区別できる。
+#   重要 (受信トレイに残す): レビュー依頼 / アサイン / メンション / コメント 等
+#   それ以外 (CI 結果・watch・状態変更など): アーカイブ
+[github]
+label = "GitHub"          # 事前に Gmail 側で作成しておく
+from = "github.com"
+important_cc = [
+  "review_requested",
+  "assign",
+  "mention",
+  "team_mention",
+  "author",
+  "comment",
+  "security_alert",
+]
