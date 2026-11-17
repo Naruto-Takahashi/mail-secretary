@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 
-from . import filters
+from . import filters, labels
 from .backfill import cmd_backfill
 from .gmail import get_service
 from .notify import cmd_run
@@ -24,7 +24,7 @@ def cmd_triage(a) -> None:
     for m in sorted(mails, key=lambda m: order.get(res.get(m["id"], {}).get("level", "info"), 9)):
         r = res.get(m["id"])
         subj = "(認証コードの通知。件名は非表示)" if is_sensitive(m["subject"]) else m["subject"][:50]
-        print(f"[{LEVEL_JA[r['level']] if r else '未判定'}] {m['from'][:30]:<30} | {subj}")
+        print(f"[{LEVEL_JA[r['level']] if r else '未判定'} / {r['kind'] if r else '-'}] {m['from'][:28]:<28} | {subj}")
         if r:
             print(f"        └ {r['summary']} ／ {r['reason']}")
 
@@ -48,6 +48,12 @@ def main() -> int:
     rp.add_argument("--yes", action="store_true")
     rp.set_defaults(fn=filters.cmd_restore_inbox)
 
+    lp = sub.add_parser("labels", help="ラベルの同期 (旧ラベルの改名・作成・色)")
+    ls = lp.add_subparsers(dest="sub", required=True)
+    lsync = ls.add_parser("sync", help="差分の表示。--yes で適用")
+    lsync.add_argument("--yes", action="store_true")
+    lsync.set_defaults(fn=labels.cmd_sync)
+
     tp = sub.add_parser("triage", help="直近のメールを判定して表示するだけ")
     tp.add_argument("--hours", type=int, default=48)
     tp.add_argument("--limit", type=int, default=30)
@@ -62,7 +68,8 @@ def main() -> int:
     up.set_defaults(fn=cmd_run)
 
     bp = sub.add_parser("backfill", help="既存メールへの一回限りのラベル付け (通知しない)。--apply なしは dry-run")
-    bp.add_argument("--query", default="in:inbox", help="対象の Gmail 検索式 (既定: in:inbox)")
+    bp.add_argument("--query", default=None, help="対象の Gmail 検索式 (既定: 受信トレイ + 種類ラベルが付いたメール)")
+    bp.add_argument("--reset", action="store_true", help="処理済みの記録を消して最初からやり直す")
     bp.add_argument("--older-than-days", type=int, default=2, help="これより新しいメールは定期実行に任せる")
     bp.add_argument("--stale-days", type=int, default=None, help="これより古い緊急・要対応は参考に下げる (既定: 設定値)")
     bp.add_argument("--limit", type=int, default=100000, help="処理する最大件数 (dry-run の試し打ちに)")

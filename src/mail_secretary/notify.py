@@ -63,8 +63,9 @@ def render(items: list[dict]) -> list[str]:
     lines = []
     for it in group_by_thread(items):
         more = f" ／ 同スレッド{it['count']}通" if it["count"] > 1 else ""
+        kind = load("triage")["kinds"].get(it.get("kind", "other"), {}).get("label", "")
         lines.append(
-            f"{ICON[it['level']]} **{LEVEL_JA[it['level']]}** {discord.md_escape(short_from(it['from']))}\n"
+            f"{ICON[it['level']]} **{LEVEL_JA[it['level']]}**{' ・' + kind if kind else ''} {discord.md_escape(short_from(it['from']))}\n"
             f"　{discord.md_escape(it['subject'][:60])}\n"
             f"　└ {discord.md_escape(it['summary'])}{more} ([開く](<{link(it['threadId'])}>))"
         )
@@ -79,7 +80,7 @@ def render(items: list[dict]) -> list[str]:
 
 def to_item(m: dict, r: dict) -> dict:
     return {"id": m["id"], "threadId": m["threadId"], "from": m["from"], "subject": m["subject"],
-            "date": m["date"], "level": r["level"], "summary": r["summary"]}
+            "date": m["date"], "level": r["level"], "kind": r.get("kind", "other"), "summary": r["summary"]}
 
 
 # ---------------------------------------------------------------- digest ---

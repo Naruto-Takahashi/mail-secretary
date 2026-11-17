@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import functools
 import os
 import tomllib
 from pathlib import Path
@@ -38,6 +39,7 @@ def _merge(base: dict, over: dict) -> dict:
     return out
 
 
+@functools.cache
 def load(name: str) -> dict:
     cfg = tomllib.loads((CONFIG_DIR / f"{name}.toml").read_text())
     override = OVERRIDE_DIR / f"{name}.toml"

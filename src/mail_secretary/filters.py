@@ -27,7 +27,8 @@ def desired(label_id: str, sender: str, important: str) -> list[dict]:
 
 
 def norm(f: dict) -> str:
-    action = {k: sorted(v) for k, v in f.get("action", {}).items()}
+    # Gmail は「迷惑メールにしない」(removeLabelIds の SPAM) を自動で足すことがあるので、比較では無視する
+    action = {k: sorted(x for x in v if not (k == "removeLabelIds" and x == "SPAM")) for k, v in f.get("action", {}).items()}
     return json.dumps({"criteria": f.get("criteria", {}), "action": action}, sort_keys=True, ensure_ascii=False)
 
 
@@ -42,7 +43,11 @@ def compute_plan(svc):
     managed = [f for f in existing if label_id in f.get("action", {}).get("addLabelIds", [])]
     have = {norm(f): f for f in managed}
     want_keys = {norm(f) for f in want}
-    return label, [f for k, f in have.items() if k not in want_keys], [f for f in want if norm(f) not in have]
+    to_delete = [f for k, f in have.items() if k not in want_keys]
+    # 送信元だけで種類ラベルを付けていたフィルタは、AI が中身で付けるようにするため削除する
+    drop = {ids[n] for n in load("filters").get("remove", {}).get("labels", []) if n in ids}
+    to_delete += [f for f in existing if drop & set(f.get("action", {}).get("addLabelIds", [])) and f not in to_delete]
+    return label, to_delete, [f for f in want if norm(f) not in have]
 
 
 def cmd_dump(_args) -> None:

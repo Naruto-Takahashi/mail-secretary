@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import base64
+import re
 import time
+from html import unescape
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-from .config import CREDENTIALS, TOKEN
+from .config import CREDENTIALS, TOKEN, load
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.settings.basic",  # フィルタ
@@ -42,9 +45,15 @@ def label_ids(svc) -> dict[str, str]:
     return {n: i for i, n in label_names(svc).items()}
 
 
-def ensure_label(svc, name: str, ids: dict[str, str]) -> str:
+def color_body(color: list[str] | None) -> dict:
+    """設定の [背景, 文字] を Gmail のラベル色に変換する。"""
+    return {"color": {"backgroundColor": color[0], "textColor": color[1]}} if color else {}
+
+
+def ensure_label(svc, name: str, ids: dict[str, str], color: list[str] | None = None) -> str:
     if name not in ids:
-        ids[name] = svc.users().labels().create(userId="me", body={"name": name}).execute()["id"]
+        body = {"name": name, "labelListVisibility": "labelShow", "messageListVisibility": "show", **color_body(color)}
+        ids[name] = svc.users().labels().create(userId="me", body=body).execute()["id"]
     return ids[name]
 
 
@@ -67,11 +76,40 @@ def list_ids(svc, q: str, limit: int) -> list[str]:
     return ids[:limit]
 
 
+def _decode(data: str) -> str:
+    return base64.urlsafe_b64decode(data + "=" * (-len(data) % 4)).decode("utf-8", "replace")
+
+
+def _walk(part: dict):
+    yield part
+    for p in part.get("parts") or []:
+        yield from _walk(p)
+
+
+def body_text(payload: dict, limit: int) -> str:
+    """本文の先頭 limit 字 (プレーンテキスト)。URL と長い数字 (カード番号・電話番号等) は伏せる。"""
+    if limit <= 0:
+        return ""
+    plain = html = ""
+    for p in _walk(payload):
+        data = p.get("body", {}).get("data")
+        if not data:
+            continue
+        mt = p.get("mimeType", "")
+        if mt == "text/plain" and not plain:
+            plain = _decode(data)
+        elif mt == "text/html" and not html:
+            html = _decode(data)
+    text = plain or re.sub(r"<[^>]+>", " ", re.sub(r"(?is)<(script|style).*?</\1>", " ", html))
+    text = unescape(text)
+    text = re.sub(r"https?://\S+", "[URL]", text)
+    text = re.sub(r"\d(?:[ -]?\d){7,}", "[数字]", text)
+    return re.sub(r"\s+", " ", text).strip()[:limit]
+
+
 def get_mail(svc, mid: str, names: dict[str, str]) -> dict:
-    """1通分のメタデータ (件名・差出人・スニペット・ラベル)。本文は取らない。"""
-    m = svc.users().messages().get(
-        userId="me", id=mid, format="metadata", metadataHeaders=["From", "Subject", "Date"]
-    ).execute()
+    """1通分の情報 (件名・差出人・本文の先頭・ラベル)。"""
+    m = svc.users().messages().get(userId="me", id=mid, format="full").execute()
     raw = m.get("labelIds", [])
     return {
         "id": mid,
@@ -81,6 +119,7 @@ def get_mail(svc, mid: str, names: dict[str, str]) -> dict:
         "subject": header(m, "Subject"),
         "date": header(m, "Date"),
         "snippet": (m.get("snippet") or "")[:200],
+        "body": body_text(m.get("payload", {}), load("triage")["body_chars"]),
         "categories": [i for i in raw if i.startswith("CATEGORY_")],
         "labels": [names.get(i, i) for i in raw if not i.startswith(("CATEGORY_", "UNREAD", "IMPORTANT"))],
     }
