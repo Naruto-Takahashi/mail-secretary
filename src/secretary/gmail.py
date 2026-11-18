@@ -17,20 +17,30 @@ from .config import CREDENTIALS, TOKEN, load
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.settings.basic",  # フィルタ
     "https://www.googleapis.com/auth/gmail.modify",  # ラベル・メッセージ
+    "https://www.googleapis.com/auth/calendar.readonly",  # カレンダーの予定読み取り
 ]
 
 
-def get_service():
+def get_credentials():
     creds = None
     if TOKEN.exists():
-        creds = Credentials.from_authorized_user_file(TOKEN, SCOPES)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
+        creds = Credentials.from_authorized_user_file(TOKEN)
+    # token.json に実際に保存されているスコープが要求スコープを満たしているか確認
+    granted = set(creds.scopes or []) if creds else set()
+    need_auth = not creds or not creds.valid or not set(SCOPES).issubset(granted)
+    if need_auth:
+        if creds and creds.expired and creds.refresh_token and set(SCOPES).issubset(granted):
             creds.refresh(Request())
         else:
-            creds = InstalledAppFlow.from_client_secrets_file(CREDENTIALS, SCOPES).run_local_server(port=0)
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS, SCOPES)
+            creds = flow.run_local_server(port=0)
         TOKEN.write_text(creds.to_json())
         TOKEN.chmod(0o600)
+    return creds
+
+
+def get_service():
+    creds = get_credentials()
     return build("gmail", "v1", credentials=creds, cache_discovery=False)
 
 

@@ -1,7 +1,7 @@
 [project]
-name = "mail-secretary"
-version = "0.2.0"
-description = "メールの自動整理・AI 重要度判定・Discord 通知を行う個人用の秘書"
+name = "secretary"
+version = "0.3.0"
+description = "個人の常駐型秘書: メールの自動整理・予定把握・タスク整理・Discord通知"
 requires-python = ">=3.11"
 dependencies = ["google-api-python-client", "google-auth-oauthlib"]
 

@@ -10,8 +10,12 @@ from .triage import LEVEL_JA, classify, is_sensitive
 
 
 def cmd_auth(_a) -> None:
+    from .calendar import get_calendar_service
     prof = get_service().users().getProfile(userId="me").execute()
-    print(f"認可OK: {prof['emailAddress']}")
+    cal = get_calendar_service()
+    cal_info = cal.calendars().get(calendarId="primary").execute()
+    print(f"Gmail認可OK: {prof['emailAddress']}")
+    print(f"カレンダー認可OK: {cal_info.get('summary', 'primary')}")
 
 
 def cmd_triage(a) -> None:
@@ -30,7 +34,7 @@ def cmd_triage(a) -> None:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(prog="mail-secretary")
+    p = argparse.ArgumentParser(prog="secretary")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("auth", help="初回認可").set_defaults(fn=cmd_auth)
     sub.add_parser("dump", help="既存フィルタの一覧").set_defaults(fn=filters.cmd_dump)
@@ -77,6 +81,11 @@ def main() -> int:
     bp.add_argument("--verbose", action="store_true")
     bp.add_argument("--apply", action="store_true", help="実際に Gmail へ反映する")
     bp.set_defaults(fn=cmd_backfill)
+
+    br = sub.add_parser("briefing", help="朝のデイリーブリーフィング (予定・タスク・要対応メールのまとめ)。--apply なしは dry-run")
+    br.add_argument("--apply", action="store_true", help="実際に Discord に投稿する")
+    from .briefing import cmd_briefing
+    br.set_defaults(fn=cmd_briefing)
 
     args = p.parse_args()
     args.fn(args)

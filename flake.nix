@@ -16,22 +16,22 @@
     in
     {
       packages = forAll (pkgs: rec {
-        mail-secretary = pkgs.writeShellApplication {
-          name = "mail-secretary";
+        secretary = pkgs.writeShellApplication {
+          name = "secretary";
           runtimeInputs = [
             pkgs.uv
             pkgs.python3
           ];
-          # ソースは読み取り専用の Nix ストアに置かれるため、仮想環境はキャッシュ側に作る。
           text = ''
             export PYTHONPATH="${self}/src''${PYTHONPATH:+:$PYTHONPATH}"
-            export UV_PROJECT_ENVIRONMENT="''${XDG_CACHE_HOME:-$HOME/.cache}/mail-secretary/venv"
+            export UV_PROJECT_ENVIRONMENT="''${XDG_CACHE_HOME:-$HOME/.cache}/secretary/venv"
             export UV_PYTHON="${pkgs.python3}/bin/python3"
             export UV_PYTHON_DOWNLOADS=never
-            exec uv run --quiet --frozen --project ${self} python -m mail_secretary "$@"
+            exec uv run --quiet --frozen --project ${self} python -m secretary "$@"
           '';
         };
-        default = mail-secretary;
+        mail-secretary = secretary;
+        default = secretary;
       });
 
       # home-manager モジュール (launchd / systemd の定期実行を宣言する)

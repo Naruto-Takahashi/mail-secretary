@@ -1,22 +1,21 @@
-# mail-secretary
+# secretary
 
-Gmail の新着を AI (Antigravity CLI `agy` / Gemini) で重要度判定し、ラベル付け・受信トレイの整理・Discord 通知を行う個人用の秘書。
+個人の常駐型秘書: メールの自動整理・予定把握・タスク整理・Discord 通知。
 
-## しくみ (`mail-secretary run --apply` を 10 分おきに実行)
-1. 新着メール (件名・差出人・スニペット) を取得し、未処理のものだけを AI に渡して重要度 4 段階 (緊急 / 要対応 / 参考 / 無視) を判定する。認証コード等は AI に送らない。
-2. 重要度ラベル (`重要度/1_緊急` 等) を付け、参考・無視は受信トレイから外す (保護ラベルが付いたものとスター付きは残す)。
-3. 緊急はすぐ Discord にメンション付きで通知。要対応はためておき、朝・夕にまとめて通知する。
-
-`--apply` を付けない `run` は dry-run (メールの変更・投稿・状態の保存をしない)。
+## 概要
+- **メール仕分け (`secretary run --apply`)**: Gmail の新着を AI (`agy` / Gemini) で重要度判定し、ラベル付け・受信トレイ整理・Discord 通知。
+- **朝のデイリーブリーフィング (`secretary briefing --apply`)**: Google カレンダーの本日の予定 ＋ Obsidian 外部脳の未完了タスク ＋ 要対応メールを1通にまとめ、毎朝 Discord に投稿。
 
 ## コマンド
 ```
-mail-secretary auth                 初回認可 (ブラウザが開く)
-mail-secretary filters plan|apply   Gmail フィルタの同期 (config/filters.toml)
-mail-secretary triage               直近のメールを判定して表示するだけ
-mail-secretary run [--apply]        判定・整理・通知
-mail-secretary backfill [--apply]   既存メールへの一回限りのラベル付け (通知しない。--apply なしは dry-run)
-mail-secretary restore-inbox        重要な GitHub 通知を受信トレイに戻す
+secretary auth                 初回認可 (Gmail・カレンダー読み取り)
+secretary briefing [--apply]   朝のデイリーブリーフィング (予定・ToDo・要対応メール)
+secretary run [--apply]        メールの定期実行 (判定・整理・通知)
+secretary triage               直近のメールを判定して表示するだけ
+secretary backfill [--apply]   既存メールへの一回限りのラベル付け
+secretary filters plan|apply   Gmail フィルタの同期 (config/filters.toml)
+secretary labels sync          ラベルの同期 (旧ラベルの改名・作成・色)
+secretary restore-inbox        重要な GitHub 通知を受信トレイに戻す
 ```
 
 ## 既定の設定 (`config/`)

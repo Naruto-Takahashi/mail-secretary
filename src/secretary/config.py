@@ -21,8 +21,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = ROOT / "config"  # 同梱の既定値
 
-HOME = Path(os.environ.get("MAIL_SECRETARY_HOME", "~/.config/mail-secretary")).expanduser()
-OVERRIDE_DIR = Path(os.environ.get("MAIL_SECRETARY_CONFIG_DIR", HOME / "config")).expanduser()
+def _resolve_home() -> Path:
+    if "SECRETARY_HOME" in os.environ:
+        return Path(os.environ["SECRETARY_HOME"]).expanduser()
+    if "MAIL_SECRETARY_HOME" in os.environ:
+        return Path(os.environ["MAIL_SECRETARY_HOME"]).expanduser()
+    p_sec = Path("~/.config/secretary").expanduser()
+    p_mail = Path("~/.config/mail-secretary").expanduser()
+    return p_sec if p_sec.exists() or not p_mail.exists() else p_mail
+
+
+def _resolve_config_dir(home: Path) -> Path:
+    if "SECRETARY_CONFIG_DIR" in os.environ:
+        return Path(os.environ["SECRETARY_CONFIG_DIR"]).expanduser()
+    if "MAIL_SECRETARY_CONFIG_DIR" in os.environ:
+        return Path(os.environ["MAIL_SECRETARY_CONFIG_DIR"]).expanduser()
+    return home / "config"
+
+
+HOME = _resolve_home()
+OVERRIDE_DIR = _resolve_config_dir(HOME)
 SECRET_DIR = HOME / "gmail"
 DISCORD_ENV = Path(os.environ.get("DISCORD_ENV", HOME / "discord" / "bot.env")).expanduser()
 
