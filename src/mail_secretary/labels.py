@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from .config import load
-from .gmail import color_body, get_service
+from .gmail import batch_modify, color_body, get_service, list_ids
 
 
 def wanted() -> dict[str, list[str] | None]:
@@ -28,7 +28,13 @@ def cmd_sync(args) -> None:
         if old not in cur:
             continue
         if new in cur:
-            print(f"要確認: 「{new}」が既にあるため「{old}」を改名できません")
+            # 新しいラベルが既にある (旧版が旧名を作り直した等): メールを新しいラベルへ移して、旧ラベルを削除する
+            def merge(o=cur[old]["id"], n=cur[new]["id"], name=old):
+                ids = list_ids(svc, f'label:"{name}"', 100000)
+                batch_modify(svc, ids, [n], [o])
+                api.delete(userId="me", id=o).execute()
+            todo.append((f"統合: {old} -> {new} (メールを移して、旧ラベルを削除)", merge))
+            del cur[old]
             continue
         todo.append((f"改名: {old} -> {new}", lambda i=cur[old]["id"], n=new: api.patch(userId="me", id=i, body={"name": n}).execute()))
         cur[new] = {**cur.pop(old), "name": new}
