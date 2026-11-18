@@ -125,8 +125,8 @@ def cmd_run(args) -> None:
         res = classify(new)
         items = organize.plan(new, res)
         n_arch = sum(p["archive"] for p in items)
-        n_prot = sum(p["protected"] for p in items)
-        print(f"整理: ラベル付与 {sum(bool(p['label']) for p in items)} 通 / 受信トレイから外す {n_arch} 通 / 保護で残す {n_prot} 通"
+        n_prot = sum(p["kept_by_star"] for p in items)
+        print(f"整理: ラベル付与 {sum(bool(p['add']) for p in items)} 通 / 受信トレイから外す {n_arch} 通 / 保護で残す {n_prot} 通"
               + ("" if args.apply else " (dry-run)"), file=sys.stderr)
         if args.apply:
             organize.apply(svc, items)
