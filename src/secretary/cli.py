@@ -13,9 +13,9 @@ def cmd_auth(_a) -> None:
     from .calendar import get_calendar_service
     prof = get_service().users().getProfile(userId="me").execute()
     cal = get_calendar_service()
-    cal_info = cal.calendars().get(calendarId="primary").execute()
+    cal.events().list(calendarId="primary", maxResults=1).execute()
     print(f"Gmail認可OK: {prof['emailAddress']}")
-    print(f"カレンダー認可OK: {cal_info.get('summary', 'primary')}")
+    print(f"カレンダー認可OK (予定の読み書き可能)")
 
 
 def cmd_triage(a) -> None:
