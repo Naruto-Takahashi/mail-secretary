@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, time, timezone
 from googleapiclient.discovery import build
+from .config import load
 from .gmail import get_credentials
 
 
@@ -115,6 +116,14 @@ def insert_calendar_event(
     }
     if location:
         body["location"] = location
+
+    # カレンダーの配色設定 (colorId)
+    category = event_data.get("category", "other")
+    colors_cfg = load("triage").get("calendar", {}).get("colors", {})
+    color_id = colors_cfg.get(category, colors_cfg.get("default"))
+    if color_id:
+        body["colorId"] = str(color_id)
+
 
     if is_all_day:
         # 日付のみ (YYYY-MM-DD)

@@ -44,11 +44,24 @@ def schema() -> dict:
                                 "end": {"type": "string"},
                                 "is_all_day": {"type": "boolean"},
                                 "status": {"type": "string", "enum": ["confirmed", "tentative"]},
+                                "category": {
+                                    "type": "string",
+                                    "enum": [
+                                        "deadline",
+                                        "sakurai_lab",
+                                        "sakurai_rinko",
+                                        "fukuoka_mitou",
+                                        "orizon",
+                                        "lr_dev",
+                                        "job",
+                                        "other",
+                                    ],
+                                },
                                 "location": {"type": "string"},
                                 "description": {"type": "string"},
                                 "candidates": {"type": "array", "items": {"type": "string"}},
                             },
-                            "required": ["title", "start", "is_all_day", "status"],
+                            "required": ["title", "start", "is_all_day", "status", "category"],
                         },
                     },
                     "required": ["id", "level", "kind", "summary", "reason"],
@@ -65,7 +78,16 @@ def output_spec() -> str:
         '出力は {"results": [...]} の JSON のみ。results の要素は '
         '{"id": "<入力のid>", "level": "urgent|action|info|ignore", "kind": "<種類のキー: ' + "|".join(kind_keys()) + '>", '
         '"summary": "30字程度の日本語要約", "reason": "判定理由を20字程度", '
-        '"calendar_event": null または {"title": "予定タイトル", "start": "YYYY-MM-DDまたはYYYY-MM-DDTHH:MM:SS", "end": "YYYY-MM-DDTHH:MM:SS", "is_all_day": true|false, "status": "confirmed|tentative", "location": "場所/URL", "description": "補足メモ", "candidates": ["候補1", "候補2"]}}。\n'
+        '"calendar_event": null または {"title": "予定タイトル", "start": "YYYY-MM-DDまたはYYYY-MM-DDTHH:MM:SS", "end": "YYYY-MM-DDTHH:MM:SS", "is_all_day": true|false, "status": "confirmed|tentative", "category": "deadline|sakurai_lab|sakurai_rinko|fukuoka_mitou|orizon|lr_dev|job|other", "location": "場所/URL", "description": "補足メモ", "candidates": ["候補1", "候補2"]}}。\n'
+        "【カレンダー分類（category）】\n"
+        "- deadline: 奨学金の申請・更新手続き、重要書類提出締切、大きめの重要イベントなど最優先で目立たせるもの\n"
+        "- sakurai_lab: 櫻井教授との面談、卒論中間審査・発表、研究室ゼミなど\n"
+        "- sakurai_rinko: 輪講・輪講発表\n"
+        "- fukuoka_mitou: 福岡未踏（APOR.IA 関連の報告会・提出・審査）\n"
+        "- orizon: オリズン社とのミーティング・報告\n"
+        "- lr_dev: LR（開発バイト）のミーティング・出社\n"
+        "- job: 就活（面接・選考・説明会）\n"
+        "- other: その他の個別予定\n"
         "【カレンダー・予定の判定基準】\n"
         "- ユーザー本人が関わるプロジェクトの締め切り、教授や研究室との面談・ゼミ、就職活動の面接・説明会、個別ミーティングなど。\n"
         "- status の判定:\n"
