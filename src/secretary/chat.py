@@ -189,22 +189,42 @@ def reply(user_text: str, history: list[dict] | None = None) -> tuple[str, list[
         "秘書の返答 (上記フォーマットのJSONのみを出力してください):"
     )
 
-    cmd = os.environ.get("AGY_CMD", "agy").split() + [
-        "-p", full_prompt,
-        "--model", "gemini-3.8-flash-medium",
-        "--sandbox",
-        "--output-format", "json",
-        "--print-timeout", "45s",
-    ]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-    if r.returncode != 0:
-        return "申し訳ありません、応答の生成中にエラーが発生しました。", history
+    # AI バックエンドの呼び出し (環境変数 CHAT_AI_CMD、または claude / agy)
+    ai_cmd_env = os.environ.get("CHAT_AI_CMD")
+    if ai_cmd_env:
+        cmd = ai_cmd_env.split() + [full_prompt]
+    elif Path("/etc/profiles/per-user/nalt/bin/claude").exists():
+        # Claude CLI が利用可能な場合は高速で安定した応答のために使用
+        cmd = ["claude", "-p", full_prompt]
+    else:
+        cmd = os.environ.get("AGY_CMD", "agy").split() + [
+            "-p", full_prompt,
+            "--model", "gemini-3.8-flash-medium",
+            "--sandbox",
+            "--output-format", "json",
+            "--print-timeout", "45s",
+        ]
 
     try:
-        out = json.loads(r.stdout)
-        resp_text = out.get("response", "")
-        # JSONブロックの抽出
-        m = re.search(r"\{.*\}", resp_text, re.DOTALL)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    except subprocess.TimeoutExpired:
+        return "申し訳ありません、応答の生成がタイムアウトしました。もう一度お試しください。", history
+
+    if r.returncode != 0:
+        err_msg = r.stderr[:200] if r.stderr else r.stdout[:200]
+        return f"応答の生成中にエラーが発生しました: {err_msg}", history
+
+    raw_output = r.stdout
+    try:
+        # JSON 形式の抽出 (agy の output-format=json または claude の出力)
+        if "response" in raw_output and "status" in raw_output:
+            try:
+                parsed = json.loads(raw_output)
+                raw_output = parsed.get("response", raw_output)
+            except Exception:
+                pass
+
+        m = re.search(r"\{.*\}", raw_output, re.DOTALL)
         if m:
             data = json.loads(m.group(0))
             reply_msg = data.get("reply", "")
@@ -213,9 +233,10 @@ def reply(user_text: str, history: list[dict] | None = None) -> tuple[str, list[
                 act_result = execute_action(action)
                 reply_msg += act_result
         else:
-            reply_msg = resp_text.strip()
+            reply_msg = raw_output.strip()
     except Exception as e:
-        reply_msg = f"応答の解析に失敗しました: {e}\n{r.stdout[:200]}"
+        reply_msg = f"{raw_output.strip()}"
+
 
     new_hist = history + [{"role": "user", "content": user_text}, {"role": "assistant", "content": reply_msg}]
     return reply_msg, new_hist[-10:]
