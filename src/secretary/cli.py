@@ -96,6 +96,11 @@ def main() -> int:
     from .briefing import cmd_briefing
     br.set_defaults(fn=cmd_briefing)
 
+    bt = sub.add_parser("bot", help="Discord 双方向対話 Bot の常駐起動")
+    from .bot import cmd_bot
+    bt.set_defaults(fn=cmd_bot)
+
     args = p.parse_args()
     args.fn(args)
     return 0
+

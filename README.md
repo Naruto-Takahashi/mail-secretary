@@ -12,6 +12,7 @@ secretary auth                 初回認可 (Gmail・カレンダー読み書き
 secretary briefing [--apply]   朝のデイリーブリーフィング (予定・ToDo・要対応メール)
 secretary run [--apply]        メールの定期実行 (判定・整理・カレンダー登録・通知)
 secretary triage               直近のメールを判定して表示するだけ (カレンダー候補も表示)
+secretary bot                  Discord 双方向対話 Bot の起動 (チャットでの予定確認・登録・相談)
 secretary backfill [--apply]   既存メールへの一回限りのラベル付け
 secretary filters plan|apply   Gmail フィルタの同期 (config/filters.toml)
 secretary labels sync          ラベルの同期 (旧ラベルの改名・作成・色)
