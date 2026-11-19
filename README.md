@@ -3,15 +3,15 @@
 個人の常駐型秘書: メールの自動整理・予定把握・タスク整理・Discord 通知。
 
 ## 概要
-- **メール仕分け (`secretary run --apply`)**: Gmail の新着を AI (`agy` / Gemini) で重要度判定し、ラベル付け・受信トレイ整理・Discord 通知。
+- **メール仕分け (`secretary run --apply`)**: Gmail の新着を AI (`agy` / Gemini) で重要度判定し、ラベル付け・受信トレイ整理・カレンダー予定自動登録・Discord 通知。
 - **朝のデイリーブリーフィング (`secretary briefing --apply`)**: Google カレンダーの本日の予定 ＋ Obsidian 外部脳の未完了タスク ＋ 要対応メールを1通にまとめ、毎朝 Discord に投稿。
 
 ## コマンド
 ```
-secretary auth                 初回認可 (Gmail・カレンダー読み取り)
+secretary auth                 初回認可 (Gmail・カレンダー読み書き)
 secretary briefing [--apply]   朝のデイリーブリーフィング (予定・ToDo・要対応メール)
-secretary run [--apply]        メールの定期実行 (判定・整理・通知)
-secretary triage               直近のメールを判定して表示するだけ
+secretary run [--apply]        メールの定期実行 (判定・整理・カレンダー登録・通知)
+secretary triage               直近のメールを判定して表示するだけ (カレンダー候補も表示)
 secretary backfill [--apply]   既存メールへの一回限りのラベル付け
 secretary filters plan|apply   Gmail フィルタの同期 (config/filters.toml)
 secretary labels sync          ラベルの同期 (旧ラベルの改名・作成・色)

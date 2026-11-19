@@ -31,6 +31,10 @@ def cmd_triage(a) -> None:
         print(f"[{LEVEL_JA[r['level']] if r else '未判定'} / {r['kind'] if r else '-'}] {m['from'][:28]:<28} | {subj}")
         if r:
             print(f"        └ {r['summary']} ／ {r['reason']}")
+            ev = r.get("calendar_event")
+            if ev and isinstance(ev, dict) and ev.get("title"):
+                loc = f" ({ev['location']})" if ev.get("location") else ""
+                print(f"          📅 カレンダー候補: {ev.get('start')} {ev.get('title')}{loc}")
 
 
 def main() -> int:

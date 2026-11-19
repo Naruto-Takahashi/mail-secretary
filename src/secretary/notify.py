@@ -11,7 +11,7 @@ import re
 import sys
 from datetime import datetime, timedelta
 
-from . import discord, organize
+from . import calendar, discord, organize
 from .config import STATE, load
 from .gmail import fetch_recent, get_service
 from .triage import LEVEL_JA, LEVELS, classify
@@ -27,11 +27,17 @@ def load_state() -> dict:
         s = json.loads(STATE.read_text())
     except (FileNotFoundError, json.JSONDecodeError):
         s = {}
-    return {"seen": s.get("seen", []), "pending": s.get("pending", []), "last_digest": s.get("last_digest")}
+    return {
+        "seen": s.get("seen", []),
+        "pending": s.get("pending", []),
+        "last_digest": s.get("last_digest"),
+        "calendar_added": s.get("calendar_added", []),
+    }
 
 
 def save_state(s: dict) -> None:
     s["seen"] = s["seen"][-3000:]
+    s["calendar_added"] = s.get("calendar_added", [])[-1000:]
     STATE.write_text(json.dumps(s, ensure_ascii=False))
     STATE.chmod(0o600)
 
@@ -131,6 +137,49 @@ def cmd_run(args) -> None:
         if args.apply:
             organize.apply(svc, items)
 
+        # カレンダー登録対象の検出と登録
+        cal_events_to_add = []
+        already_added = set(state.get("calendar_added", []))
+        for m in new:
+            r = res.get(m["id"])
+            if not r:
+                continue
+            ev = r.get("calendar_event")
+            if ev and isinstance(ev, dict) and ev.get("title") and ev.get("start"):
+                if m["id"] not in already_added:
+                    cal_events_to_add.append((m, ev))
+
+        if cal_events_to_add:
+            cal_lines = ["📅 **カレンダーに予定を登録しました**" if args.apply else "📅 **カレンダー登録の候補 (dry-run)**"]
+            cal_svc = None
+            if args.apply:
+                try:
+                    cal_svc = calendar.get_calendar_service()
+                except Exception as e:
+                    print(f"[calendar] カレンダーサービス取得エラー: {e}", file=sys.stderr)
+
+            for m, ev in cal_events_to_add:
+                title = ev.get("title")
+                st = ev.get("start")
+                loc = f" ({ev['location']})" if ev.get("location") else ""
+                desc = f"\n　└ {ev['description']}" if ev.get("description") else ""
+                cal_lines.append(f"・`{st}` **{title}**{loc}{desc}\n　([メールを開く](<{link(m['threadId'])}>))")
+
+                if args.apply and cal_svc:
+                    try:
+                        calendar.insert_calendar_event(ev, m, cal=cal_svc)
+                        state["calendar_added"].append(m["id"])
+                        print(f"[calendar] 登録完了: {title} ({st})", file=sys.stderr)
+                    except Exception as e:
+                        print(f"[calendar] 登録失敗 ({title}): {e}", file=sys.stderr)
+
+            # Discord 通知 (即時)
+            cal_msg = "\n".join(cal_lines)
+            if args.apply:
+                discord.post(cal_msg, ping=False)
+            else:
+                print("-----(dry-run: カレンダー予定)-----\n" + cal_msg)
+
         judged = [to_item(m, res[m["id"]]) for m in new if m["id"] in res]
         urgent = [x for x in judged if x["level"] == "urgent"]
         digest_levels = set(cfg_n["digest"]["levels"])
@@ -138,7 +187,7 @@ def cmd_run(args) -> None:
 
         if urgent:
             n_threads = len(group_by_thread(urgent))
-            post_all(render(urgent), f"📬 **緊急** {n_threads}件", cfg_n["urgent"]["ping"], args.apply)
+            post_all(render(urgent), f"🚨 **緊急** {n_threads}件", cfg_n["urgent"]["ping"], args.apply)
         if args.apply:
             known = {x["threadId"] for x in state["pending"]}
             state["pending"] += [x for x in later if x["id"] not in {p["id"] for p in state["pending"]}]

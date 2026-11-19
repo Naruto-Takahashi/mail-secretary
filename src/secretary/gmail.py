@@ -17,7 +17,7 @@ from .config import CREDENTIALS, TOKEN, load
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.settings.basic",  # フィルタ
     "https://www.googleapis.com/auth/gmail.modify",  # ラベル・メッセージ
-    "https://www.googleapis.com/auth/calendar.readonly",  # カレンダーの予定読み取り
+    "https://www.googleapis.com/auth/calendar.events",  # カレンダーの予定読み取り・追加・変更
 ]
 
 
