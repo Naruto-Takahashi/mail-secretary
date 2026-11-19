@@ -34,7 +34,12 @@ def cmd_triage(a) -> None:
             ev = r.get("calendar_event")
             if ev and isinstance(ev, dict) and ev.get("title"):
                 loc = f" ({ev['location']})" if ev.get("location") else ""
-                print(f"          📅 カレンダー候補: {ev.get('start')} {ev.get('title')}{loc}")
+                status = ev.get("status", "confirmed")
+                if status == "tentative":
+                    cands = f" [候補: {', '.join(ev.get('candidates', []))}]" if ev.get("candidates") else ""
+                    print(f"          🤔 日程調整 (未確定): {ev.get('title')}{loc}{cands}")
+                else:
+                    print(f"          📅 カレンダー登録 (確定): {ev.get('start')} {ev.get('title')}{loc}")
 
 
 def main() -> int:

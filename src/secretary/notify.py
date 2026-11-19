@@ -137,20 +137,25 @@ def cmd_run(args) -> None:
         if args.apply:
             organize.apply(svc, items)
 
-        # カレンダー登録対象の検出と登録
-        cal_events_to_add = []
+        # カレンダー登録対象・日程調整候補の検出
+        confirmed_events = []
+        tentative_events = []
         already_added = set(state.get("calendar_added", []))
         for m in new:
             r = res.get(m["id"])
             if not r:
                 continue
             ev = r.get("calendar_event")
-            if ev and isinstance(ev, dict) and ev.get("title") and ev.get("start"):
-                if m["id"] not in already_added:
-                    cal_events_to_add.append((m, ev))
+            if ev and isinstance(ev, dict) and ev.get("title"):
+                status = ev.get("status", "confirmed")
+                if status == "tentative":
+                    tentative_events.append((m, ev))
+                elif ev.get("start") and m["id"] not in already_added:
+                    confirmed_events.append((m, ev))
 
-        if cal_events_to_add:
-            cal_lines = ["📅 **カレンダーに予定を登録しました**" if args.apply else "📅 **カレンダー登録の候補 (dry-run)**"]
+        # 1. 確定予定: Google カレンダーへ自動登録 & 通知
+        if confirmed_events:
+            cal_lines = ["📅 **カレンダーに予定を登録しました**" if args.apply else "📅 **カレンダー登録の候補 (確定・dry-run)**"]
             cal_svc = None
             if args.apply:
                 try:
@@ -158,7 +163,7 @@ def cmd_run(args) -> None:
                 except Exception as e:
                     print(f"[calendar] カレンダーサービス取得エラー: {e}", file=sys.stderr)
 
-            for m, ev in cal_events_to_add:
+            for m, ev in confirmed_events:
                 title = ev.get("title")
                 st = ev.get("start")
                 loc = f" ({ev['location']})" if ev.get("location") else ""
@@ -173,12 +178,31 @@ def cmd_run(args) -> None:
                     except Exception as e:
                         print(f"[calendar] 登録失敗 ({title}): {e}", file=sys.stderr)
 
-            # Discord 通知 (即時)
             cal_msg = "\n".join(cal_lines)
             if args.apply:
                 discord.post(cal_msg, ping=False)
             else:
-                print("-----(dry-run: カレンダー予定)-----\n" + cal_msg)
+                print("-----(dry-run: 確定カレンダー予定)-----\n" + cal_msg)
+
+        # 2. 未確定・調整中予定: カレンダーには入れず、Discord でユーザーに確認を促す
+        if tentative_events:
+            tent_lines = ["🤔 **日程調整の確認が必要です (未確定の予定)**"]
+            for m, ev in tentative_events:
+                title = ev.get("title")
+                loc = f" ({ev['location']})" if ev.get("location") else ""
+                cands = ev.get("candidates") or []
+                cands_str = f"\n　・候補日時: {', '.join(f'`{c}`' for c in cands)}" if cands else ""
+                desc = f"\n　└ {ev['description']}" if ev.get("description") else ""
+                tent_lines.append(
+                    f"・**{title}**{loc}{cands_str}{desc}\n"
+                    f"　└ 対応: 都合の良い日程を確認・返信してください ([メールを開く](<{link(m['threadId'])}>))"
+                )
+
+            tent_msg = "\n".join(tent_lines)
+            if args.apply:
+                discord.post(tent_msg, ping=True)
+            else:
+                print("-----(dry-run: 日程調整の確認)-----\n" + tent_msg)
 
         judged = [to_item(m, res[m["id"]]) for m in new if m["id"] in res]
         urgent = [x for x in judged if x["level"] == "urgent"]

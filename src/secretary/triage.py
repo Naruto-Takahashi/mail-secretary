@@ -43,10 +43,12 @@ def schema() -> dict:
                                 "start": {"type": "string"},
                                 "end": {"type": "string"},
                                 "is_all_day": {"type": "boolean"},
+                                "status": {"type": "string", "enum": ["confirmed", "tentative"]},
                                 "location": {"type": "string"},
                                 "description": {"type": "string"},
+                                "candidates": {"type": "array", "items": {"type": "string"}},
                             },
-                            "required": ["title", "start", "is_all_day"],
+                            "required": ["title", "start", "is_all_day", "status"],
                         },
                     },
                     "required": ["id", "level", "kind", "summary", "reason"],
@@ -63,9 +65,12 @@ def output_spec() -> str:
         '出力は {"results": [...]} の JSON のみ。results の要素は '
         '{"id": "<入力のid>", "level": "urgent|action|info|ignore", "kind": "<種類のキー: ' + "|".join(kind_keys()) + '>", '
         '"summary": "30字程度の日本語要約", "reason": "判定理由を20字程度", '
-        '"calendar_event": null または {"title": "予定タイトル", "start": "YYYY-MM-DDまたはYYYY-MM-DDTHH:MM:SS", "end": "YYYY-MM-DDTHH:MM:SS", "is_all_day": true|false, "location": "場所/URL", "description": "補足メモ"}}。\n'
-        "【カレンダー登録対象】\n"
-        "- ユーザー本人が関わるプロジェクトの締め切り（提出期限・マイルストーン）、教授や研究室との面談・ゼミ、就職活動の面接・説明会、個別ミーティングなど、カレンダーに入れる価値のある具体的な日時や期限。\n"
+        '"calendar_event": null または {"title": "予定タイトル", "start": "YYYY-MM-DDまたはYYYY-MM-DDTHH:MM:SS", "end": "YYYY-MM-DDTHH:MM:SS", "is_all_day": true|false, "status": "confirmed|tentative", "location": "場所/URL", "description": "補足メモ", "candidates": ["候補1", "候補2"]}}。\n'
+        "【カレンダー・予定の判定基準】\n"
+        "- ユーザー本人が関わるプロジェクトの締め切り、教授や研究室との面談・ゼミ、就職活動の面接・説明会、個別ミーティングなど。\n"
+        "- status の判定:\n"
+        "  - confirmed: 日時が確定している予定や提出締切（例: 「明日10:00〜面談します」「締切は11/30」）。Googleカレンダーに即座に自動登録されます。\n"
+        "  - tentative: 日程調整中・候補日が複数提示されている・都合を尋ねられている状態（例: 「以下の日程でご都合いかがでしょうか」「候補日: 1)... 2)...」）。カレンダーには入れずDiscordでユーザーに確認を仰ぎます。candidates に候補日時を列挙してください。\n"
         "- 一般の広告やメルマガのセミナー案内、不特定多数向けイベント、具体的な期日・日時のないものは calendar_event を null にすること。\n"
         "入力の全メールについて1要素ずつ返してください。"
     )
