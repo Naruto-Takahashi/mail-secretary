@@ -119,7 +119,7 @@ def body_text(payload: dict, limit: int) -> str:
 
 def get_mail(svc, mid: str, names: dict[str, str]) -> dict:
     """1通分の情報 (件名・差出人・本文の先頭・ラベル)。"""
-    m = svc.users().messages().get(userId="me", id=mid, format="full").execute()
+    m = svc.users().messages().get(userId="me", id=mid, format="full").execute(num_retries=6)
     raw = m.get("labelIds", [])
     return {
         "id": mid,
